@@ -14,22 +14,58 @@ const PORT = 4000;
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-const notes = [];
+let notes = [];
 
-// routes
+// ---------------------  FUNCTIONS --------------------------
+// self-calling function to get data from db file and add to local array
+(function readDbFile() {
+    fs.readFile(
+        "/Users/brittanyfortner/Desktop/Code/Homework/note-taker/db/db.json",
+        function(err, data) {
+            if (err) {
+                console.log(err);
+            } else {
+                notes = JSON.parse(data);
+            }
+        }
+    );
+})();
+
+// function to write new db file with note additions and deletions
+function writeFile() {
+    let overwrite = JSON.stringify(notes);
+    fs.writeFile(
+        "/Users/brittanyfortner/Desktop/Code/Homework/note-taker/db/db.json",
+        overwrite,
+        function(err) {
+            if (err) {
+                console.log(err);
+            } else {
+                console.log("File written");
+            }
+        }
+    );
+}
+
+// ------------------------- ROUTES ---------------------------
+// basic route to notes HTML file
+app.get("/notes", function(req, res) {
+    res.sendFile(path.join(__dirname, "notes.html"));
+});
 
 // respond with all notes
 app.get("/api/notes", function(req, res) {
     return res.json(notes);
 });
 
-// add new note and respond with the new note json data
+// add new note
 app.post("/api/notes", function(req, res) {
     const newNote = req.body;
     const id = { id: uuid() };
     Object.assign(newNote, id);
     notes.push(newNote);
-    res.json(newNote);
+    writeFile();
+    return res.json(newNote);
 });
 
 // displays a single note
@@ -46,27 +82,24 @@ app.get("/api/notes/:note", function(req, res) {
 });
 
 // delete selected note
-app.delete("/api/notes/:del", function(req, res) {
-    let newChosen = req.params.del;
+app.delete("/api/notes/:id", function(req, res) {
+    let newChosen = req.params.id;
     console.log(newChosen);
 
     for (let i = 0; i < notes.length; i++) {
         if (newChosen === notes[i].id) {
             notes.splice(i, 1);
+            writeFile();
             return res.json(notes);
         }
     }
     return res.json(false);
 });
 
-function readDbFile() {
-    fs.readFile(
-        "/Users/brittanyfortner/Desktop/Code/Homework/note-taker/db/db.json",
-        function(err, data) {
-            notes = JSON.parse(data);
-        }
-    );
-}
+// basic route to index HTML file
+app.get("*", function(req, res) {
+    res.sendFile(path.join(__dirname, "index.html"));
+});
 
 // starts the server to begin listening
 app.listen(PORT, function() {
